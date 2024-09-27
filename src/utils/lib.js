@@ -241,24 +241,7 @@ function currentDateTimeStr() {
   return new Date().toLocaleString("pt-BR", { hour12: false });
 }
 
-function config_id_storage() {
-  return process.env.CONFIG_ID_STORAGE;
-}
 
-function config_modulo_server() {
-  return Number(process.env.CONFIG_MODULO_SERVER);
-}
-
-function config_modulo_client() {
-  return Number(process.env.CONFIG_MODULO_CLIENT);
-}
-function config_id_integracao() {
-  return Number(process.env.CONFIG_ID_INTEGRACAO);
-}
-
-function config_id_marketplace() {
-  return Number(process.env.CONFIG_ID_MARKETPLACE);
-}
 
 function toJson(obj) {
   return JSON.stringify(obj);
@@ -282,11 +265,8 @@ function convertToTitleCase(str) {
 }
 
 export const lib = {
-  config_id_integracao,
-  config_modulo_server,
-  config_modulo_client,
-  config_id_marketplace,
-  config_id_storage,
+
+
 
   convertToTitleCase,
   criaArray,

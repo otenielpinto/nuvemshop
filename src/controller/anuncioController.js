@@ -28,12 +28,12 @@ async function enviarEstoqueEcommerce() {
   for (let tenant of tenants) {
     console.log(
       "Inicio do processamento do estoque Servidor NuvemShop do tenant " +
-        tenant.id_tenant
+      tenant.id_tenant
     );
     //await retificarEstoqueByTenant(tenant);
     console.log(
       "Fim do processamento do estoque Servidor NuvemShop do tenant " +
-        tenant.id_tenant
+      tenant.id_tenant
     );
   }
 }
