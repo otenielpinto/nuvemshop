@@ -45,6 +45,16 @@ class EstoqueRepository {
       .findOne({ id_produto: Number(id_produto) });
   }
 
+  async updateMany(query = {}, fields = {}) {
+    try {
+      return await this.db
+        .collection(collection)
+        .updateMany(query, { $set: fields });
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async insertMany(items) {
     if (!Array.isArray(items)) return null;
     try {

@@ -4,92 +4,183 @@ import { TMongo } from "../infra/mongoClient.js";
 import { EstoqueRepository } from "../repository/estoqueRepository.js";
 import { AnuncioRepository } from "../repository/anuncioRepository.js";
 import { logService } from "../services/logService.js";
+import { response } from "express";
 
 async function init() {
   //fazer uma atualizacao dos status =500  e tambem de todos que estão situacao =0
 }
 
-async function updateEstoqueLoteByTenant(tenant, anuncios) {
-  return;
-  let c = await TMongo.connect();
-  let estoqueRepository = new EstoqueRepository(c, tenant.id_tenant);
-  let anuncioRepository = new AnuncioRepository(c, tenant.id_tenant);
+async function produtoById(tenant, id_anuncio_mktplace) {
+  let nuvemshop = new Nuvemshop(tenant);
+  nuvemshop.setTimeout(1000 * 10);
+  let response = null;
 
-  //notifico todas as variacoes
-  let count = 0;
-  for (let anuncio of anuncios) {
-    count++;
-    let rows = await estoqueRepository.findAll({
-      codigo_anuncio: anuncio.codigo,
-    });
-    if (count > 300) break;
-    console.log(`[${count} ] update anuncio ` + anuncio.id + " " + anuncio.sku);
-
-    let status_anuncio = 1;
-    for (let row of rows) {
-      let payload = {
-        sys_estoque: Number(row?.estoque ? row.estoque : 0),
-      };
-      let codigo = String(row?.id_produto);
-
-      // if (!r) {
-      //   await logService.saveLog({
-      //     id_tenant: tenant.id_tenant,
-      //     id_marketplace: tenant.id_mktplace,
-      //     id_anuncio: anuncio.id,
-      //     id_produto: codigo,
-      //     message: "Produto nao atualizado no Tiny " + codigo,
-      //     payload: payload,
-      //   });
-      // }
-    }
-    await anuncioRepository.update(anuncio.id, { status: status_anuncio });
+  for (let i = 0; i < 5; i++) {
+    response = await nuvemshop.get(`products/${id_anuncio_mktplace}`, {});
+    await nuvemshop.tratarRetorno(response, 200);
+    if (nuvemshop.status() == "OK") break;
   }
+  return response;
 }
 
-//idProduto = id Tiny do Produto
-async function produtoAtualizarEstoque(token, id_produto, quantity) {
-  return;
-  let date = new Date();
-  let hora = date.getHours(); // 0-23
-  let min = date.getMinutes(); // 0-59
-  let seg = date.getSeconds(); // 0-59
-  let minFmt = min;
-  if (min < 10) minFmt = `0${min}`;
-  if (quantity < 0) quantity = 0;
-
-  let obs =
-    `Estoque Movimentado : ${quantity} as ` +
-    lib.formatDateBr(date) +
-    ` ${hora}:${minFmt}:${seg} by T7Ti `;
-
-  const estoque = {
-    idProduto: id_produto,
-    tipo: "B",
-    observacoes: obs,
-    quantidade: quantity,
-  };
-
-  const tiny = new Tiny({ token: token });
-  tiny.setTimeout(1000 * 10);
+async function produtoBySku(tenant, sku) {
+  let nuvemshop = new Nuvemshop(tenant);
+  nuvemshop.setTimeout(1000 * 10);
   let response = null;
-  const data = [{ key: "estoque", value: { estoque } }];
 
-  for (let t = 1; t < 5; t++) {
-    console.log("Atualizando estoque " + t + "/5  " + id_produto);
-    response = await tiny.post("produto.atualizar.estoque.php", data);
-    response = await tiny.tratarRetorno(response, "registros");
-    if (tiny.status() == "OK") return response;
-    response = null;
+  for (let i = 0; i < 5; i++) {
+    response = await nuvemshop.get(`products/sku/${sku}`, {});
+    await nuvemshop.tratarRetorno(response, 200);
+    if (nuvemshop.status() == "OK") break;
+  }
+  return response;
+}
+
+async function patchManyVariants(tenant, id_anuncio_mktplace, payload) {
+  let nuvemshop = new Nuvemshop(tenant);
+  nuvemshop.setTimeout(1000 * 10);
+  let response = null;
+
+  for (let i = 0; i < 5; i++) {
+    response = await nuvemshop.patch(
+      `products/${id_anuncio_mktplace}/variants`,
+      payload
+    );
+    await nuvemshop.tratarRetorno(response, 200);
+    if (nuvemshop.status() == "OK") break;
+  }
+  return response;
+}
+
+async function updateOneVariant(tenant, id_anuncio_mktplace, payload) {
+  let nuvemshop = new Nuvemshop(tenant);
+  nuvemshop.setTimeout(1000 * 10);
+  let response = null;
+  let id_variant = payload?.id;
+
+  for (let i = 0; i < 5; i++) {
+    response = await nuvemshop.put(
+      `products/${id_anuncio_mktplace}/variants/${id_variant}`,
+      payload
+    );
+    await nuvemshop.tratarRetorno(response, 200);
+    if (nuvemshop.status() == "OK") break;
+  }
+  return response;
+}
+
+async function updateLoteOneByOne(tenant, id_anuncio_mktplace, variants) {
+  let result = {};
+  for (let variant of variants) {
+    let response = await updateOneVariant(tenant, id_anuncio_mktplace, variant);
+    result[id_anuncio_mktplace] = response?.data;
+  }
+  return result;
+}
+
+async function getProdutoSkuOrId(tenant, sku, id_anuncio_mktplace) {
+  let response = null;
+
+  if (id_anuncio_mktplace) {
+    console.log("Pesquisando por id_marketplace " + id_anuncio_mktplace);
+    response = await produtoById(tenant, id_anuncio_mktplace);
   }
 
+  if (sku && !response?.id) {
+    console.log("pesquisando por sku ..." + sku);
+    response = await produtoBySku(tenant, sku);
+  }
   return response;
+}
+
+async function listOfVariants(productTiny) {
+  if (!productTiny.variants) return [];
+  let variants = productTiny?.variants;
+  return variants;
+}
+
+async function parseToVariants(anuncio, product, variacoes) {
+  if (
+    !product ||
+    !Array.isArray(product?.variants) ||
+    !Array.isArray(variacoes)
+  ) {
+    return [];
+  }
+
+  let updatedVariants = [];
+  let variants = product?.variants ? product?.variants : [];
+  let preco_promocional = Number(anuncio?.preco_promocional);
+  let preco_original = Number(anuncio?.preco_original);
+  let preco = Number(anuncio?.preco);
+
+  if (preco_original > preco) {
+    preco = preco_original;
+  }
+
+  for (let v of variants) {
+    let response = null;
+    for (let variacao of variacoes) {
+      if (String(variacao?.id_produto) === String(v?.sku)) {
+        response = variacao;
+        break;
+      }
+    }
+
+    if (response && String(response?.id_produto) === String(v?.sku)) {
+      let estoque = response?.estoque ? response?.estoque : 0;
+      let variant = {
+        id: v?.id,
+        price: preco,
+        promotional_price: preco_promocional,
+        stock: estoque,
+        barcode: response?.gtin ? response?.gtin : null,
+        values: v.values,
+      };
+      updatedVariants.push(variant);
+    }
+    response = null;
+  }
+  return updatedVariants;
+}
+
+async function patchEstoquePreco(tenant, lotes) {
+  let result = {};
+  let productsNotFound = [];
+
+  let estoque = new EstoqueRepository(
+    await TMongo.connect(),
+    tenant?.id_tenant
+  );
+
+  for (let lote of lotes) {
+    let sku = lote?.sku;
+    let id_anuncio_mktplace = lote?.id_anuncio_mktplace;
+    let response = await getProdutoSkuOrId(tenant, sku, id_anuncio_mktplace);
+    let product = response?.data;
+
+    if (!product?.id) {
+      productsNotFound.push(lote);
+      console.log("not found " + lote?.sku);
+      continue;
+    }
+
+    let variacoes = await estoque.findAll({ codigo_anuncio: lote.codigo });
+    let payload = await parseToVariants(lote, product, variacoes);
+    let r = await patchManyVariants(tenant, product.id, payload);
+    result.status = r?.status;
+    result.payload = payload;
+    result.variacoes = variacoes;
+    if (r.status != 200) await updateLoteOneByOne(tenant, product.id, payload);
+  }
+
+  result.productsNotFound = productsNotFound;
+  return result;
 }
 
 const estoqueController = {
   init,
-  produtoAtualizarEstoque,
-  updateEstoqueLoteByTenant,
+  patchEstoquePreco,
 };
 
 export { estoqueController };

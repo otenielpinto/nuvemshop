@@ -20,7 +20,7 @@ export const nuvemshopApi = async (apiUrl, data = {}, method = "GET") => {
     });
     return response;
   } catch (error) {
-    console.log("🚀 ~ file: nuvemshop.js:24 ~ module.exports= ~ error:", error);
+    // console.log("🚀 ~ file: nuvemshop.js:24 ~ module.exports= ~ error:", error);
     return error;
   }
 };
