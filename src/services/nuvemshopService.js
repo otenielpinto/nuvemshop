@@ -24,6 +24,7 @@ class Nuvemshop {
       seller_id: this.seller_id,
       body: {},
     };
+    console.log("GET", url);
     return await nuvemshopApi(url, data, "GET");
   }
   async post(url, body = {}) {
@@ -32,6 +33,7 @@ class Nuvemshop {
       seller_id: this.seller_id,
       body,
     };
+    console.log("POST", url);
     return await nuvemshopApi(url, data, "POST");
   }
   async put(url, body = {}) {
@@ -40,6 +42,7 @@ class Nuvemshop {
       seller_id: this.seller_id,
       body,
     };
+    console.log("PUT", url);
     return await nuvemshopApi(url, data, "PUT");
   }
   async delete(url) {
@@ -56,6 +59,7 @@ class Nuvemshop {
       seller_id: this.seller_id,
       body,
     };
+    console.log("PATCH", url);
     return await nuvemshopApi(`${url}`, data, "PATCH");
   }
 
@@ -64,17 +68,15 @@ class Nuvemshop {
     this.local_status = response?.status;
     this.local_data = response?.data;
 
-
     if (response?.status == 429) {
       await sleep(this.timeout);
       return response?.data;
     }
 
     if (response?.status == 422) {
-      await sleep(this.timeout);
+      console.log(response);
       return response?.response?.data;
     }
-
 
     if (response?.status === status_code) {
       return response?.data;
@@ -86,7 +88,7 @@ class Nuvemshop {
 
   status() {
     if (this.local_statusText !== "OK") {
-      console.log(this.local_data ? this.local_data : '');
+      console.log(this.local_data ? this.local_data : "");
     }
     return this.local_statusText;
   }

@@ -8,6 +8,7 @@ import { mpkIntegracaoController } from "./mpkIntegracaoController.js";
 import { marketplaceTypes } from "../types/marketplaceTypes.js";
 import { systemService } from "../services/systemService.js";
 import { logService } from "../services/logService.js";
+import { parse } from "dotenv";
 
 var filterNuvemshop = {
   id_mktplace: marketplaceTypes.nuvem_shop,
@@ -17,13 +18,6 @@ async function init() {
   await atualizarPrecoVendaEstoque();
 }
 
-async function processarLote(anuncioRepository, lotes) {
-  if (!Array.isArray(lotes)) return;
-  for (let lote of lotes) {
-    lote.status = 1;
-    await anuncioRepository.update(lote?.id, lote);
-  }
-}
 async function modificarStatusEstoque(tenant) {
   const c = await TMongo.connect();
 
@@ -39,6 +33,8 @@ async function modificarStatusEstoque(tenant) {
 
 async function atualizarPrecoVendaEstoque() {
   const c = await TMongo.connect();
+  const listOfStatus = [200, 201, 404];
+  const message_too_many_request = "Too many requests, please try again later";
   let tenants = await mpkIntegracaoController.findAll(filterNuvemshop);
   for (let tenant of tenants) {
     console.log("Inicio Atualizacao Precos  " + tenant.id_tenant);
@@ -49,27 +45,34 @@ async function atualizarPrecoVendaEstoque() {
       status: 0,
     };
     let rows = await anuncioRepository.findAll(where);
-    let record = 0;
+    let record = 1;
     let record_count = rows?.length;
 
     for (let row of rows) {
       console.log(`Lendo: ${record++}/${record_count}`);
       let response = await estoqueController.patchEstoquePreco(tenant, [row]);
-      await processarLote(anuncioRepository, [row]);
-      if (response?.status != 200) {
+
+      if (listOfStatus.includes(response?.status)) {
+        console.log(`[ atualizado ]   status [ ${response?.status} ] `);
+        await anuncioRepository.update(row.id, { status: 1 });
+      }
+
+      if (response?.status == 429) {
+        console.log(message_too_many_request);
+        await lib.sleep(1000 * 10);
+      } else if (response?.status != 200 && response?.status != 404) {
         await logService.saveLog({
           id_tenant: tenant.id_tenant,
+          id_mktplace: tenant.id_mktplace,
           id_integracao: tenant.id,
-          id_marketplace: tenant.id_mktplace,
           id_anuncio_mktplace: row.id_anuncio_mktplace,
-          id_anuncio: row.id,
-          payload: row,
-          response: response,
           status: response?.status,
+          message: JSON.stringify(response),
         });
       }
-      //todo : criar funcao para guardar produtos excluido da plataforma
-    }
+    } //rows
+
+    //todo : criar funcao para guardar produtos excluido da plataforma
 
     await modificarStatusEstoque(tenant);
     console.log("Fim atualizacao Preços " + tenant.id_tenant);

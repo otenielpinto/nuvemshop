@@ -4,7 +4,6 @@ import { TMongo } from "../infra/mongoClient.js";
 import { EstoqueRepository } from "../repository/estoqueRepository.js";
 import { AnuncioRepository } from "../repository/anuncioRepository.js";
 import { logService } from "../services/logService.js";
-import { response } from "express";
 
 async function init() {
   //fazer uma atualizacao dos status =500  e tambem de todos que estão situacao =0
@@ -41,7 +40,7 @@ async function patchManyVariants(tenant, id_anuncio_mktplace, payload) {
   nuvemshop.setTimeout(1000 * 10);
   let response = null;
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     response = await nuvemshop.patch(
       `products/${id_anuncio_mktplace}/variants`,
       payload
@@ -70,12 +69,12 @@ async function updateOneVariant(tenant, id_anuncio_mktplace, payload) {
 }
 
 async function updateLoteOneByOne(tenant, id_anuncio_mktplace, variants) {
-  let result = {};
+  let items = [];
   for (let variant of variants) {
     let response = await updateOneVariant(tenant, id_anuncio_mktplace, variant);
-    result[id_anuncio_mktplace] = response?.data;
+    items.push(response?.data);
   }
-  return result;
+  return items;
 }
 
 async function getProdutoSkuOrId(tenant, sku, id_anuncio_mktplace) {
@@ -133,7 +132,7 @@ async function parseToVariants(anuncio, product, variacoes) {
         id: v?.id,
         price: preco,
         promotional_price: preco_promocional,
-        stock: estoque,
+        stock: estoque > 0 ? estoque : 0, // nao pode enviar estoque negativo  retorno 422 - Unprocessable Entity
         barcode: response?.gtin ? response?.gtin : null,
         values: v.values,
       };
@@ -141,12 +140,13 @@ async function parseToVariants(anuncio, product, variacoes) {
     }
     response = null;
   }
+
   return updatedVariants;
 }
 
 async function patchEstoquePreco(tenant, lotes) {
-  let result = {};
   let productsNotFound = [];
+  let result = {};
 
   let estoque = new EstoqueRepository(
     await TMongo.connect(),
@@ -154,24 +154,31 @@ async function patchEstoquePreco(tenant, lotes) {
   );
 
   for (let lote of lotes) {
-    let sku = lote?.sku;
-    let id_anuncio_mktplace = lote?.id_anuncio_mktplace;
+    let { sku, id_anuncio_mktplace } = lote;
     let response = await getProdutoSkuOrId(tenant, sku, id_anuncio_mktplace);
     let product = response?.data;
 
     if (!product?.id) {
       productsNotFound.push(lote);
-      console.log("not found " + lote?.sku);
+      result.status = 404;
+      result.response = response;
+      console.log("not found " + sku);
       continue;
     }
 
     let variacoes = await estoque.findAll({ codigo_anuncio: lote.codigo });
     let payload = await parseToVariants(lote, product, variacoes);
+
     let r = await patchManyVariants(tenant, product.id, payload);
     result.status = r?.status;
-    result.payload = payload;
-    result.variacoes = variacoes;
-    if (r.status != 200) await updateLoteOneByOne(tenant, product.id, payload);
+    result.data = r?.data;
+    if (r?.status != 200) {
+      try {
+        await updateLoteOneByOne(tenant, product?.id, payload);
+      } catch (error) {
+        console.log(error?.message);
+      }
+    }
   }
 
   result.productsNotFound = productsNotFound;
