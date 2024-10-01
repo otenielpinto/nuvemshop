@@ -66,6 +66,7 @@ async function updateOneVariant(tenant, id_anuncio_mktplace, payload) {
     );
     await nuvemshop.tratarRetorno(response, 200);
     if (nuvemshop.status() == "OK") break;
+    if (response?.status == 422) break;
   }
   return response;
 }
@@ -135,7 +136,6 @@ async function parseToVariants(anuncio, product, variacoes) {
         price: preco,
         promotional_price: preco_promocional > 0 ? preco_promocional : null,
         stock: estoque > 0 ? estoque : 0, // nao pode enviar estoque negativo  retorno 422 - Unprocessable Entity
-        barcode: response?.gtin ? response?.gtin : null,
       };
       if (v?.values?.length > 0) {
         variant.values = v.values;

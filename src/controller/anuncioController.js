@@ -53,7 +53,9 @@ async function atualizarPrecoVendaEstoque() {
       let response = await estoqueController.patchEstoquePreco(tenant, [row]);
 
       if (listOfStatus.includes(response?.status)) {
-        console.log(`[ atualizado ]   status [ ${response?.status} ] `);
+        console.log(
+          `[ atualizado ]   status [ ${response?.status} ]  id [ ${row.id} ]`
+        );
         await anuncioRepository.update(row.id, { status: 1 });
       }
 
