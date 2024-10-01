@@ -48,7 +48,7 @@ async function patchManyVariants(tenant, id_anuncio_mktplace, payload) {
       payload
     );
     await nuvemshop.tratarRetorno(response, 200);
-    if (nuvemshop.status() == "OK") break;
+    if (nuvemshop.status() == "OK" || response?.status == 422) break;
   }
   return response;
 }
@@ -65,8 +65,7 @@ async function updateOneVariant(tenant, id_anuncio_mktplace, payload) {
       payload
     );
     await nuvemshop.tratarRetorno(response, 200);
-    if (nuvemshop.status() == "OK") break;
-    if (response?.status == 422) break;
+    if (nuvemshop.status() == "OK" || response?.status == 422) break;
   }
   return response;
 }
@@ -133,13 +132,11 @@ async function parseToVariants(anuncio, product, variacoes) {
       let estoque = response?.estoque ? response?.estoque : 0;
       let variant = {
         id: v?.id,
+        product_id: v?.product_id,
         price: preco,
-        promotional_price: preco_promocional > 0 ? preco_promocional : null,
+        promotional_price: preco_promocional,
         stock: estoque > 0 ? estoque : 0, // nao pode enviar estoque negativo  retorno 422 - Unprocessable Entity
       };
-      if (v?.values?.length > 0) {
-        variant.values = v.values;
-      }
       updatedVariants.push(variant);
     }
     response = null;
@@ -163,9 +160,11 @@ async function patchEstoquePreco(tenant, lotes) {
     let product = response?.data;
 
     if (!product?.id) {
-      productsNotFound.push(lote);
-      result.status = 404;
-      result.response = response;
+      result.status = response?.status;
+      result.data = response?.data;
+      if (response?.status == 404) {
+        productsNotFound.push(lote);
+      }
       console.log("not found " + sku);
       continue;
     }
@@ -175,11 +174,13 @@ async function patchEstoquePreco(tenant, lotes) {
 
     let r = await patchManyVariants(tenant, product.id, payload);
     result.status = r?.status;
+    result.data = r?.data;
+
     if (r?.status == 422) {
       console.log("erro: " + JSON.stringify(r?.response?.data));
+      result.data = r?.response?.data;
     }
 
-    result.data = r?.data;
     if (r?.status == 422) {
       try {
         await updateLoteOneByOne(tenant, product?.id, payload);
@@ -187,7 +188,7 @@ async function patchEstoquePreco(tenant, lotes) {
         console.log(error?.message);
       }
     }
-  }
+  } //lotes
 
   result.productsNotFound = productsNotFound;
   return result;
