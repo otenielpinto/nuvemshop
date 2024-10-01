@@ -68,6 +68,15 @@ class Nuvemshop {
     this.local_status = response?.status;
     this.local_data = response?.data;
 
+    if (response?.status === status_code) {
+      return response?.data;
+    }
+
+    if (response?.status == 404) {
+      console.log(response);
+      return response?.data;
+    }
+
     if (response?.status == 429) {
       await sleep(this.timeout);
       return response?.data;
@@ -76,10 +85,6 @@ class Nuvemshop {
     if (response?.status == 422) {
       console.log(response);
       return response?.response?.data;
-    }
-
-    if (response?.status === status_code) {
-      return response?.data;
     }
 
     //console.log(response);

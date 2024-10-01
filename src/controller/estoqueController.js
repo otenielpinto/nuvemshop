@@ -18,6 +18,7 @@ async function produtoById(tenant, id_anuncio_mktplace) {
     response = await nuvemshop.get(`products/${id_anuncio_mktplace}`, {});
     await nuvemshop.tratarRetorno(response, 200);
     if (nuvemshop.status() == "OK") break;
+    if (response?.status == 404) break;
   }
   return response;
 }
@@ -31,6 +32,7 @@ async function produtoBySku(tenant, sku) {
     response = await nuvemshop.get(`products/sku/${sku}`, {});
     await nuvemshop.tratarRetorno(response, 200);
     if (nuvemshop.status() == "OK") break;
+    if (response?.status == 404) break;
   }
   return response;
 }
@@ -40,7 +42,7 @@ async function patchManyVariants(tenant, id_anuncio_mktplace, payload) {
   nuvemshop.setTimeout(1000 * 10);
   let response = null;
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 5; i++) {
     response = await nuvemshop.patch(
       `products/${id_anuncio_mktplace}/variants`,
       payload
@@ -131,11 +133,13 @@ async function parseToVariants(anuncio, product, variacoes) {
       let variant = {
         id: v?.id,
         price: preco,
-        promotional_price: preco_promocional,
+        promotional_price: preco_promocional > 0 ? preco_promocional : null,
         stock: estoque > 0 ? estoque : 0, // nao pode enviar estoque negativo  retorno 422 - Unprocessable Entity
         barcode: response?.gtin ? response?.gtin : null,
-        values: v.values,
       };
+      if (v?.values?.length > 0) {
+        variant.values = v.values;
+      }
       updatedVariants.push(variant);
     }
     response = null;
@@ -171,8 +175,12 @@ async function patchEstoquePreco(tenant, lotes) {
 
     let r = await patchManyVariants(tenant, product.id, payload);
     result.status = r?.status;
+    if (r?.status == 422) {
+      console.log("erro: " + JSON.stringify(r?.response?.data));
+    }
+
     result.data = r?.data;
-    if (r?.status != 200) {
+    if (r?.status == 422) {
       try {
         await updateLoteOneByOne(tenant, product?.id, payload);
       } catch (error) {
