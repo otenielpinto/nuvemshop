@@ -50,7 +50,9 @@ async function listOfVariations(payload) {
 
   for (let v of variations) {
     let size = v?.tamanho ? v?.tamanho : "UNICO";
-    let color = lib.ucfirst(String(v?.nome_cor ? v?.nome_cor : "UNICA").toLocaleLowerCase());
+    let color = lib.ucfirst(
+      String(v?.nome_cor ? v?.nome_cor : "UNICA").toLocaleLowerCase()
+    );
     let values = [{ pt: size }, { pt: color }];
 
     let obj = {
@@ -78,6 +80,10 @@ async function listOfVariations(payload) {
 async function toNuvemshop(payload) {
   let id_storage = await getIdStorage(payload);
   let variacao = Number(payload?.variacao);
+  let nome_cor = lib.convertToTitleCase(
+    String(payload?.nome_cor).toLocaleLowerCase()
+  );
+
   let attributes = [{ pt: "Tamanho" }, { pt: "Cor" }];
   let descricao_base = lib.convertToTitleCase(
     payload?.descricao_base
@@ -87,7 +93,7 @@ async function toNuvemshop(payload) {
 
   let produto = {
     name: {
-      pt: descricao_base,
+      pt: descricao_base + " " + nome_cor,
     },
     seo_title: { pt: descricao_base },
     description: {
@@ -106,7 +112,6 @@ async function toNuvemshop(payload) {
   ) {
     produto.id = payload.id_anuncio_mktplace;
   }
-
 
   if (payload?.variacoes) {
     produto.variants = await listOfVariations(payload);
@@ -139,7 +144,6 @@ async function toNuvemshop(payload) {
   if (payload?.lista_categorias) {
     produto.categories = lib.criaArray(payload.lista_categorias);
   }
-
 
   return produto;
 }
