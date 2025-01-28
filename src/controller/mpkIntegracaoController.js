@@ -11,7 +11,9 @@ const mpkIntegracaoSchema = z.object({
   id_mktplace: z.number().min(1, "Por favor informe um id maior que 0"),
   codigo: z.string().min(10, "Codigo deve ser prenchido"),
   id_tenant: z.number().min(1, "Por favor informe um id maior que 0"),
-  id_storage: z.string().min(1, "Por favor informe um id de storage para a integração de fotos"),
+  id_storage: z
+    .string()
+    .min(1, "Por favor informe um id de storage para a integração de fotos"),
 });
 
 const getToken = async (body) => {
@@ -34,8 +36,6 @@ const getIdStorage = async (body) => {
   }
   return tenant.id_storage;
 };
-
-
 
 const findOne = async (filter = {}) => {
   const repository = new MpkIntegracaoRepository(await TMongo.connect());
@@ -67,7 +67,7 @@ const mpkIntegracaoController = {
   create,
   findAll,
   findOne,
-  getToken
+  getToken,
 };
 
-export { mpkIntegracaoController, getToken, getIdStorage };
+export { mpkIntegracaoController, getToken, getIdStorage, findOne };

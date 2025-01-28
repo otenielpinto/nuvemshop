@@ -5,15 +5,11 @@ import { protocoloAnuncioController } from "../controller/protocoloAnuncioContro
 //add a product
 router.post("/", protocoloAnuncioController.create);
 router.put("/", protocoloAnuncioController.update);
+
+//precisa ser aqui antes do get /:codigo
 router.get("/:codigo", protocoloAnuncioController.get);
 router.put("/update/:codigo", protocoloAnuncioController.updateAnuncio);
 router.delete("/:codigo", protocoloAnuncioController.doDelete);
-
-// //add images to a product
-// router.post("/imagens_produto/:id", doEnviarImagensProdutoById);
-
-// //get all last products create
-// router.get("/ultimos_produtos", doGetAnuncioB2B);
 
 const anuncioRoutes = router;
 export { anuncioRoutes };

@@ -18,6 +18,12 @@ function invalidCredentials(req, res) {
   });
 }
 
+const getCredentials = async (client_id, client_secret) => {
+  //verificar credenciais
+  const auth = new AuthRepository(await TMongo.connect());
+  return await auth.validateCredentials(client_id, client_secret);
+};
+
 const validateCredentials = async (req, res, next) => {
   const { client_id, client_secret } = req.headers;
   if (!client_id || !client_secret) return invalidCredentials(req, res);
@@ -55,6 +61,7 @@ const create = async (req, res) => {
 const authController = {
   create,
   validateCredentials,
+  getCredentials
 };
 
 export { authController };

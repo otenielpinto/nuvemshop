@@ -5,11 +5,14 @@ import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import os from "os";
+import bodyParser from "body-parser";
 
 import { anuncioRoutes } from "./routes/anuncioRoutes.js";
 import { authController } from "./controller/authController.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { mpkIntegracaoRoutes } from "./routes/mpkIntegracaoRoutes.js";
+import { categoryRoutes } from "./routes/categoryRoutes.js";
+import { productImageRoutes } from "./routes/productImageRoutes.js";
 
 dotenv.config();
 process.env.TZ = "America/Sao_Paulo";
@@ -21,9 +24,17 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 app.use(helmet());
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 app.use(cors({ origin: process.env.CORS_ORIGIN }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(
+  bodyParser.urlencoded({
+    limit: "50mb",
+    extended: true,
+    parameterLimit: 50000,
+  })
+);
 
 //Minhas rotas igual eu faço com o horse
 app.get("/health", (req, res) => {
@@ -47,8 +58,12 @@ app.get("/health", (req, res) => {
 app.use("/authorization/", authRoutes);
 app.use("/ecommerce/", mpkIntegracaoRoutes);
 app.use("/anuncio/", authController.validateCredentials, anuncioRoutes);
-
-//app.use("/categoria/", categoriaRoutes);
+app.use("/category/", authController.validateCredentials, categoryRoutes);
+app.use(
+  "/product_image/",
+  authController.validateCredentials,
+  productImageRoutes
+);
 
 // Use express's default error handling middleware
 app.use((err, req, res, next) => {

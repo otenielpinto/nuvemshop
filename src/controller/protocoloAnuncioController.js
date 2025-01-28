@@ -4,13 +4,14 @@ import {
 } from "../repository/protocoloAnuncioRepository.js";
 import { ProtocoloAnuncioMapper } from "../mappers/protocoloAnuncioMappers.js";
 import { Nuvemshop } from "../services/nuvemshopService.js";
-import { getToken } from "./mpkIntegracaoController.js";
+import { getToken, findOne } from "./mpkIntegracaoController.js";
 import { TResponseService } from "../services/responseService.js";
 
 const create = async (req, res) => {
   const body = req?.body || {};
   let payload = await ProtocoloAnuncioMapper.toNuvemshop(body);
   let nuvemshop = new Nuvemshop(await getToken(body).then((t) => t));
+
   let result = null;
   let response = null;
 

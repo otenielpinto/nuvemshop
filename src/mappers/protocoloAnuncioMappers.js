@@ -15,7 +15,7 @@ async function listOfUnique(payload) {
 
   let size = payload?.tamanho ? payload?.tamanho : "UNICO";
   let values = [{ pt: size }];
-  values.push(atributes);
+
   let obj = {
     sku: String(payload?.sku),
     price: preco,
@@ -32,6 +32,7 @@ async function listOfUnique(payload) {
   if (payload?.id_variant_mktplace && payload?.id_variant_mktplace !== null) {
     obj.id = v.id_variant_mktplace;
   }
+
   variants.push(obj);
   return variants;
 }
