@@ -27,7 +27,7 @@ class AnuncioRepository {
         { $set: payload },
         { upsert: true }
       );
-    return result.modifiedCount > 0;
+    return result;
   }
 
   async delete(id) {

@@ -1,34 +1,59 @@
 import { lib } from "../utils/lib.js";
 import { AnuncioRepository } from "../repository/anuncioRepository.js";
 import { EstoqueRepository } from "../repository/estoqueRepository.js";
-import { Nuvemshop } from "../services/nuvemshopService.js";
 import { TMongo } from "../infra/mongoClient.js";
 import { estoqueController } from "./estoqueController.js";
 import { mpkIntegracaoController } from "./mpkIntegracaoController.js";
 import { marketplaceTypes } from "../types/marketplaceTypes.js";
-import { systemService } from "../services/systemService.js";
 import { logService } from "../services/logService.js";
-import { parse } from "dotenv";
+import { FilaEstoqueRepository } from "../repository/FilaEstoqueRepository.js";
 
 var filterNuvemshop = {
   id_mktplace: marketplaceTypes.nuvem_shop,
 };
 
 async function init() {
-  await atualizarPrecoVendaEstoque();
+  try {
+    await processarFilaEstoque();
+  } catch (error) {}
+
+  try {
+    await atualizarPrecoVendaEstoque();
+  } catch (error) {}
 }
 
-async function modificarStatusEstoque(tenant) {
-  const c = await TMongo.connect();
+async function processarFilaEstoque() {
+  let tenants = await mpkIntegracaoController.findAll(filterNuvemshop);
+  let c = await TMongo.connect();
 
-  let query = {
-    id_tenant: tenant.id_tenant,
-    id_integracao: tenant.id,
-    status: 0,
-  };
-  //isso aqui é muito rapido e pode ser melhorado ?
-  let estoque = new EstoqueRepository(c, tenant.id_tenant);
-  await estoque.updateMany(query, { status: 1 });
+  for (let tenant of tenants) {
+    let fila = new FilaEstoqueRepository(c);
+    let anuncio = new AnuncioRepository(c, tenant.id_tenant);
+
+    let rows = await fila.findAll({
+      id_tenant: tenant.id_tenant,
+      id_integracao: tenant.id,
+    });
+
+    console.log("Total de registros na fila de entrada: ", rows?.length);
+    let updates = 0;
+    for (let row of rows) {
+      //nao é permitido atualizar esse campo no mongodb db . ok
+      if (row._id) delete row._id;
+      let retorno = await anuncio.update(row.id, row);
+
+      if (retorno.modifiedCount > 0) {
+        await fila.delete(row.id);
+        updates++;
+      }
+    }
+
+    if (updates > 0) {
+      console.log(`${updates} registros foram atualizados.`);
+    } else {
+      console.log("Nenhum registro foi atualizado.");
+    }
+  }
 }
 
 async function atualizarPrecoVendaEstoque() {
@@ -39,6 +64,8 @@ async function atualizarPrecoVendaEstoque() {
   for (let tenant of tenants) {
     console.log("Inicio Atualizacao Precos  " + tenant.id_tenant);
     let anuncioRepository = new AnuncioRepository(c, tenant.id_tenant);
+    let estoque = new EstoqueRepository(c, tenant.id_tenant);
+
     let where = {
       id_tenant: tenant.id_tenant,
       id_marketplace: tenant.id_mktplace,
@@ -56,7 +83,13 @@ async function atualizarPrecoVendaEstoque() {
         console.log(
           `[ atualizado ]   status [ ${response?.status} ]  id [ ${row.id} ]`
         );
-        await anuncioRepository.update(row.id, { status: 1 });
+        try {
+          await anuncioRepository.update(row.id, { status: 1 });
+        } catch (error) {}
+
+        try {
+          await estoque.update(row.codigo, { status: 1 });
+        } catch (error) {}
       }
 
       if (response?.status == 429) {
@@ -75,8 +108,6 @@ async function atualizarPrecoVendaEstoque() {
     } //rows
 
     //todo : criar funcao para guardar produtos excluido da plataforma
-
-    await modificarStatusEstoque(tenant);
     console.log("Fim atualizacao Preços " + tenant.id_tenant);
   } //tenants
 }

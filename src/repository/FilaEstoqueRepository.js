@@ -1,11 +1,10 @@
 //Classe tem letras maiuculoas
 
-const collection = "tmp_estoque";
+const collection = "tmp_fila_estoque";
 
-class EstoqueRepository {
-  constructor(db, id_tenant) {
+class FilaEstoqueRepository {
+  constructor(db) {
     this.db = db;
-    this.id_tenant = Number(id_tenant);
   }
 
   async create(payload) {
@@ -13,15 +12,11 @@ class EstoqueRepository {
     return result.insertedId;
   }
 
-  async update(codigo, payload) {
+  async update(id, payload) {
     const result = await this.db
       .collection(collection)
-      .updateOne(
-        { codigo: String(codigo) },
-        { $set: payload },
-        { upsert: true }
-      );
-    return result;
+      .updateOne({ id: Number(id) }, { $set: payload }, { upsert: true });
+    return result.modifiedCount > 0;
   }
 
   async delete(id) {
@@ -39,24 +34,8 @@ class EstoqueRepository {
     return await this.db.collection(collection).findOne({ id: Number(id) });
   }
 
-  async findByIdProduto(id_produto) {
-    return await this.db
-      .collection(collection)
-      .findOne({ id_produto: Number(id_produto) });
-  }
-
-  async updateMany(query = {}, fields = {}) {
-    try {
-      return await this.db
-        .collection(collection)
-        .updateMany(query, { $set: fields });
-    } catch (e) {
-      console.log(e);
-    }
-  }
-
   async insertMany(items) {
-    if (!Array.isArray(items)) return null;
+    if (!Array.isArray(items) || items.length == 0) return null;
     try {
       return await this.db.collection(collection).insertMany(items);
     } catch (e) {
@@ -73,4 +52,4 @@ class EstoqueRepository {
   }
 }
 
-export { EstoqueRepository };
+export { FilaEstoqueRepository };
