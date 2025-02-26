@@ -18,13 +18,12 @@ async function init() {
   //Espaço reserva para testes ;
 
   //  await AnuncioController.init();
-  //  return;
+  //return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos
     const job = nodeSchedule.scheduleJob(`*/${time} * * * *`, async () => {
       console.log(" Job start as " + lib.currentDateTimeStr());
-      await TMongo.close();
 
       if (global.processandoNow == 1) {
         console.log(
@@ -33,6 +32,7 @@ async function init() {
         return;
       }
 
+      await TMongo.close();
       try {
         await task();
       } finally {

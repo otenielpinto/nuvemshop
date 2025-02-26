@@ -135,8 +135,28 @@ async function updateVariacoes(produto, variacoes) {
 }
 
 const doDelete = async (req, res) => {
-  const deleteAnuncio = await TProtocolo.deleteAnuncio(req.params.codigo);
-  TResponseService.send(req, res, deleteAnuncio);
+  let codigo = req.params.codigo;
+  let body = await TProtocolo.obterAnuncio(codigo);
+  let nuvemshop = new Nuvemshop(await getToken(body).then((t) => t));
+  let id_anuncio_mktplace = body?.id_anuncio_mktplace;
+
+  let response = await nuvemshop.delete(`products/${id_anuncio_mktplace}`);
+  let result = await nuvemshop.tratarRetorno(response, 200);
+
+  if (response?.status === 200) {
+    await TProtocolo.deleteAnuncio(codigo);
+    result = {
+      message: "Anuncio deletado com sucesso",
+      status: 200,
+    };
+
+    TResponseService.send(req, res, result);
+  } else {
+    res.status(500).send({
+      message: "Erro ao deletar anuncio",
+      status: 500,
+    });
+  }
 };
 
 const protocoloAnuncioController = {
