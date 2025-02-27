@@ -34,7 +34,7 @@ class AnuncioRepository {
     const result = await this.db
       .collection(collection)
       .deleteOne({ id: Number(id), id_tenant: this.id_tenant });
-    return result.deletedCount > 0;
+    return result;
   }
 
   async findAll(criterio = {}) {

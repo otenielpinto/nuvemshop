@@ -14,6 +14,7 @@ class EstoqueRepository {
   }
 
   async update(codigo, payload) {
+    payload.updated_at = new Date();
     const result = await this.db
       .collection(collection)
       .updateOne(
