@@ -68,7 +68,7 @@ async function atualizarPrecoVendaEstoque() {
 
     let where = {
       id_tenant: tenant.id_tenant,
-      id_marketplace: tenant.id_mktplace,
+      id_integracao: tenant.id,
       status: 0,
     };
     let rows = await anuncioRepository.findAll(where);
@@ -96,6 +96,7 @@ async function atualizarPrecoVendaEstoque() {
         console.log(message_too_many_request);
         await lib.sleep(1000 * 10);
       } else if (response?.status != 200 && response?.status != 404) {
+        await anuncioRepository.update(row.id, { status: 500 });
         await logService.saveLog({
           id_tenant: tenant.id_tenant,
           id_mktplace: tenant.id_mktplace,
