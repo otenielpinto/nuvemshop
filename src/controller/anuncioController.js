@@ -78,6 +78,8 @@ async function atualizarPrecoVendaEstoque() {
       console.log(`Lendo: ${record++}/${record_count}`);
       let response = await estoqueController.patchEstoquePreco(tenant, [row]);
 
+      await lib.sleep(1000 * 10);
+
       if (listOfStatus.includes(response?.status)) {
         console.log(
           `[ atualizado ]   status [ ${response?.status} ]  id [ ${row.id} ]`

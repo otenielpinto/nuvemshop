@@ -12,13 +12,12 @@ class AnuncioRepository {
     if (!payload.id_tenant) payload.id_tenant = this.id_tenant;
     if (!payload.sys_created_at) payload.sys_created_at = new Date();
     const result = await this.db.collection(collection).insertOne(payload);
-    return result.insertedId;
+    return result;
   }
 
   async update(id, payload) {
     if (!payload.id_tenant) payload.id_tenant = this.id_tenant;
     if (!payload.updated_at) payload.updated_at = new Date();
-    if (!payload.status) payload.status = 0;
 
     const result = await this.db
       .collection(collection)

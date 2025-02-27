@@ -6,6 +6,8 @@ global.processandoNow = 0;
 
 async function task() {
   global.processandoNow = 1;
+  await TMongo.close();
+
   //colocar aqui controller;
   await AnuncioController.init();
 
@@ -15,10 +17,10 @@ async function task() {
 }
 
 async function init() {
-  //Espaço reserva para testes ;
+  //Espaço reserva para testes;
 
-  // await AnuncioController.init();
-  // return;
+  //await AnuncioController.init();
+  //return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos
@@ -32,7 +34,6 @@ async function init() {
         return;
       }
 
-      await TMongo.close();
       try {
         await task();
       } finally {
