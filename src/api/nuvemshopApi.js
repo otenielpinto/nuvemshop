@@ -6,9 +6,10 @@ export const nuvemshopApi = async (apiUrl, data = {}, method = "GET") => {
   let body = data.body;
   let acess_token = `bearer ${data.acess_token}`;
   let seller_id = data.seller_id;
+  const response = null;
 
   try {
-    const response = await axios({
+    response = await axios({
       method,
       url: `${base_url}${seller_id}/${apiUrl}`,
       headers: {
@@ -21,6 +22,6 @@ export const nuvemshopApi = async (apiUrl, data = {}, method = "GET") => {
     return response;
   } catch (error) {
     // console.log("🚀 ~ file: nuvemshop.js:24 ~ module.exports= ~ error:", error);
-    return error;
+    return error?.data || error?.response || error;
   }
 };

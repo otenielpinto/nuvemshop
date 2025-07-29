@@ -21,6 +21,7 @@ const getToken = async (body) => {
   let filter = { id: id_integracao, id_tenant };
   let tenant = await findOne(filter);
   if (!tenant) {
+    console.log("Erro ao obter tenant [getToken]", filter);
     throw new Error("Integração não encontrada");
   }
 
@@ -32,6 +33,7 @@ const getIdStorage = async (body) => {
   let filter = { id: id_integracao, id_tenant };
   let tenant = await findOne(filter);
   if (!tenant) {
+    console.log("Erro ao obter tenant [getIdStorage]", filter);
     throw new Error("Integração não encontrada");
   }
   return tenant.id_storage;

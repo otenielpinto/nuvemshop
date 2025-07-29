@@ -103,6 +103,7 @@ const updateAnuncio = async (req, res) => {
 
 async function atualizarAnuncioWithNuvemshop(codigo) {
   let anuncio = await TProtocolo.obterAnuncio(codigo);
+
   let produto = anuncio?.sys_recibo;
   let id_pai = produto?.id;
   let variacoes = anuncio?.variacoes;

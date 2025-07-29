@@ -19,7 +19,7 @@ async function task() {
 async function init() {
   //Espaço reserva para testes;
   //await task();
-  //return
+  //return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos
