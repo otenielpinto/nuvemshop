@@ -28,6 +28,7 @@ Este projeto fornece uma integração com a [API Docs NuvemShop](https://tiendan
 
 [Partners da NuvemShop](https://partners.nuvemshop.com.br/)
 [NuvemShop site oficial ](https://www.nuvemshop.com.br/),
+[NuvemShop Login](https://www.nuvemshop.com.br/login)
 
 ---
 

@@ -1,7 +1,4 @@
-import {
-  ProtocoloAnuncioRepository,
-  TProtocolo,
-} from "../repository/protocoloAnuncioRepository.js";
+import { TProtocolo } from "../repository/protocoloAnuncioRepository.js";
 import { ProtocoloAnuncioMapper } from "../mappers/protocoloAnuncioMappers.js";
 import { Nuvemshop } from "../services/nuvemshopService.js";
 import { getToken, findOne } from "./mpkIntegracaoController.js";
@@ -52,39 +49,54 @@ const update = async (req, res) => {
 
   //atualiza as variacoes
   const variantsInsert = [];
-  for (let v of variants) {
-    if (!v?.id) {
-      variantsInsert.push(v);
-      continue;
-    }
+  try {
+    for (let v of variants) {
+      if (!v?.id) {
+        variantsInsert.push(v);
+        continue;
+      }
 
-    for (let i = 1; i <= 5; i++) {
-      let responseVariant = await nuvemshop.put(
-        `products/${id}/variants/${v?.id}`,
-        v
-      );
-      await nuvemshop.tratarRetorno(responseVariant, 200);
-      if (nuvemshop.status() == "OK") break;
+      for (let i = 1; i <= 5; i++) {
+        let responseVariant = await nuvemshop.put(
+          `products/${id}/variants/${v?.id}`,
+          v
+        );
+        await nuvemshop.tratarRetorno(responseVariant, 200);
+        if (nuvemshop.status() == "OK") break;
+      }
     }
+  } catch (error) {
+    console.log("A consulta retorno erro " + error.message);
   }
 
+  try {
+    if (variantsInsert.length > 0) {
+      for (let v of variantsInsert) {
+        let responseVariantsInsert = await nuvemshop.post(
+          `products/${id}/variants`,
+          v
+        );
+        await nuvemshop.tratarRetorno(responseVariantsInsert, 201);
+      }
+    }
+  } catch (error) {
+    console.log("A consulta retorno erro " + error.message);
+  }
   //cria as variacoes
-  if (variantsInsert.length > 0) {
-    for (let v of variantsInsert) {
-      let responseVariantsInsert = await nuvemshop.post(
-        `products/${id}/variants`,
-        v
-      );
-      await nuvemshop.tratarRetorno(responseVariantsInsert, 201);
-    }
-  }
 
   //atualiza o produto pai
-  let response = await nuvemshop.put(`products/${id}`, payload);
-  let result = await nuvemshop.tratarRetorno(response, 200);
+  let result = null;
+  let response = null;
+  try {
+    response = await nuvemshop.put(`products/${id}`, payload);
+    result = await nuvemshop.tratarRetorno(response, 200);
+  } catch (error) {
+    console.log("A consulta retorno erro " + error.message);
+  }
 
   body.sys_recibo = result;
   await TProtocolo.updateAnuncio(body);
+
   TResponseService.send(req, res, result);
 };
 
