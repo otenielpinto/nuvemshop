@@ -1,7 +1,4 @@
-import {
-  ProtocoloAnuncioRepository,
-  TProtocolo,
-} from "../repository/protocoloAnuncioRepository.js";
+import { TProtocolo } from "../repository/protocoloAnuncioRepository.js";
 import { Nuvemshop } from "../services/nuvemshopService.js";
 import { getToken } from "./mpkIntegracaoController.js";
 import { TResponseService } from "../services/responseService.js";

@@ -6,7 +6,7 @@ export const nuvemshopApi = async (apiUrl, data = {}, method = "GET") => {
   let body = data.body;
   let acess_token = `bearer ${data.acess_token}`;
   let seller_id = data.seller_id;
-  const response = null;
+  let response = null;
 
   try {
     response = await axios({
