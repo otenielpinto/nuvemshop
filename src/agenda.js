@@ -1,6 +1,7 @@
 import { TMongo } from "./infra/mongoClient.js";
 import { lib } from "./utils/lib.js";
 import { AnuncioController } from "./controller/anuncioController.js";
+import { ProductImageDownloadController } from "./controller/productImageDownloadController.js";
 import nodeSchedule from "node-schedule";
 global.processandoNow = 0;
 
@@ -19,6 +20,9 @@ async function task() {
 async function init() {
   //Espaço reserva para testes;
   //await task();
+  // await ProductImageDownloadController.init();
+
+  //console.log(" Fim do processamento " + lib.currentDateTimeStr());
   //return;
 
   try {

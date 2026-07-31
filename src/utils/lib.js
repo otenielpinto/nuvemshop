@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
 
 const lista_cfop_venda = [
   5102, 5104, 5106, 5108, 5110, 6102, 5403, 5405, 6403, 6404, 6106, 6108, 6104,
@@ -94,7 +95,7 @@ async function extrairXmlNotaFiscal(obj) {
   let xml = "";
   try {
     xml = obj?.retorno?.xml_nfe;
-  } catch (error) { }
+  } catch (error) {}
   return xml;
 }
 
@@ -241,8 +242,6 @@ function currentDateTimeStr() {
   return new Date().toLocaleString("pt-BR", { hour12: false });
 }
 
-
-
 function toJson(obj) {
   return JSON.stringify(obj);
 }
@@ -261,13 +260,23 @@ function criaArray(aString) {
 }
 
 function convertToTitleCase(str) {
-  return str.split(" ").map(word => word.charAt(0).toUpperCase() + word.substring(1)).join(" ");
+  return str
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.substring(1))
+    .join(" ");
+}
+
+function saveFile(caminho, bufferImagem) {
+  fs.writeFile(caminho, bufferImagem, (err) => {
+    if (err) {
+      console.error("Erro ao salvar a imagem:", err);
+    } else {
+      console.log("Imagem salva com sucesso em", caminho);
+    }
+  });
 }
 
 export const lib = {
-
-
-
   convertToTitleCase,
   criaArray,
   ucfirst,
@@ -298,4 +307,6 @@ export const lib = {
   dateBrToIso8601,
   formatDate,
   toJson,
+
+  saveFile,
 };

@@ -4,6 +4,32 @@ import { Nuvemshop } from "../services/nuvemshopService.js";
 import { getToken, findOne } from "./mpkIntegracaoController.js";
 import { TResponseService } from "../services/responseService.js";
 
+//retorna um http status valido para erro a partir do status devolvido pela Nuvemshop
+function getErrorStatusCode(nuvemshop) {
+  const status = nuvemshop?.local_status;
+  if (typeof status === "number" && status >= 400 && status < 600) {
+    return status;
+  }
+  return 500;
+}
+
+//monta uma mensagem legivel a partir do retorno de erro da Nuvemshop
+function extractErrorMessage(result) {
+  if (!result) return "Erro desconhecido ao comunicar com a Nuvemshop";
+  if (result?.message) return result.message;
+  if (result?.errors) {
+    return Object.entries(result.errors)
+      .map(
+        ([campo, mensagens]) =>
+          `${campo}: ${
+            Array.isArray(mensagens) ? mensagens.join(", ") : mensagens
+          }`,
+      )
+      .join(" | ");
+  }
+  return JSON.stringify(result);
+}
+
 const create = async (req, res) => {
   const body = req?.body || {};
   let payload = await ProtocoloAnuncioMapper.toNuvemshop(body);
@@ -23,6 +49,18 @@ const create = async (req, res) => {
   if (!result?.id) {
     response = await nuvemshop.post("products", payload);
     result = await nuvemshop.tratarRetorno(response, 201);
+  }
+
+  //a criacao falhou na Nuvemshop: registra e retorna o erro para o usuario resolver
+  if (!result?.id) {
+    const message = extractErrorMessage(result);
+    console.log("Erro ao criar anuncio na Nuvemshop:", message);
+    body.sys_recibo = result;
+    await TProtocolo.updateAnuncio(body);
+    res
+      .status(getErrorStatusCode(nuvemshop))
+      .send({ message, details: result });
+    return;
   }
 
   body.id_anuncio_mktplace = result?.id;
@@ -47,6 +85,9 @@ const update = async (req, res) => {
   let nuvemshop = new Nuvemshop(await getToken(body).then((t) => t));
   nuvemshop.setTimeout(1000 * 2);
 
+  //acumula erros ocorridos nas variacoes para exibir ao usuario
+  const erros = [];
+
   //atualiza as variacoes
   const variantsInsert = [];
   try {
@@ -56,17 +97,25 @@ const update = async (req, res) => {
         continue;
       }
 
+      let variantResult = null;
       for (let i = 1; i <= 5; i++) {
         let responseVariant = await nuvemshop.put(
           `products/${id}/variants/${v?.id}`,
-          v
+          v,
         );
-        await nuvemshop.tratarRetorno(responseVariant, 200);
+        variantResult = await nuvemshop.tratarRetorno(responseVariant, 200);
         if (nuvemshop.status() == "OK") break;
+      }
+      if (nuvemshop.status() !== "OK") {
+        erros.push({
+          variante: v?.id,
+          mensagem: extractErrorMessage(variantResult),
+        });
       }
     }
   } catch (error) {
     console.log("A consulta retorno erro " + error.message);
+    erros.push({ variante: null, mensagem: error.message });
   }
 
   try {
@@ -74,13 +123,23 @@ const update = async (req, res) => {
       for (let v of variantsInsert) {
         let responseVariantsInsert = await nuvemshop.post(
           `products/${id}/variants`,
-          v
+          v,
         );
-        await nuvemshop.tratarRetorno(responseVariantsInsert, 201);
+        let insertResult = await nuvemshop.tratarRetorno(
+          responseVariantsInsert,
+          201,
+        );
+        if (nuvemshop.status() !== "OK") {
+          erros.push({
+            variante: v?.sku || v?.id,
+            mensagem: extractErrorMessage(insertResult),
+          });
+        }
       }
     }
   } catch (error) {
     console.log("A consulta retorno erro " + error.message);
+    erros.push({ variante: null, mensagem: error.message });
   }
   //cria as variacoes
 
@@ -92,10 +151,26 @@ const update = async (req, res) => {
     result = await nuvemshop.tratarRetorno(response, 200);
   } catch (error) {
     console.log("A consulta retorno erro " + error.message);
+    erros.push({ variante: null, mensagem: error.message });
   }
 
   body.sys_recibo = result;
   await TProtocolo.updateAnuncio(body);
+
+  //a atualizacao do produto pai falhou: retorna o erro para o usuario resolver
+  if (!result?.id) {
+    const message = extractErrorMessage(result);
+    console.log("Erro ao atualizar anuncio na Nuvemshop:", message);
+    res
+      .status(getErrorStatusCode(nuvemshop))
+      .send({ message, details: result, erros });
+    return;
+  }
+
+  //produto pai atualizado, mas alguma variacao falhou: avisa o usuario sem quebrar o fluxo
+  if (erros.length > 0) {
+    result._avisos = erros;
+  }
 
   TResponseService.send(req, res, result);
 };
@@ -104,7 +179,7 @@ const get = async (req, res) => {
   TResponseService.send(
     req,
     res,
-    await TProtocolo.obterAnuncio(req.params.codigo)
+    await TProtocolo.obterAnuncio(req.params.codigo),
   );
 };
 
@@ -136,7 +211,7 @@ async function updateVariacoes(produto, variacoes) {
   if (!variacoes || !Array.isArray(sys_variacoes)) return variacoes;
   for (let v of variacoes) {
     item = sys_variacoes.find(
-      (sys) => String(sys?.sku) === String(v?.id_produto)
+      (sys) => String(sys?.sku) === String(v?.id_produto),
     );
     if (item?.id) {
       v.id_variant_mktplace = item?.id;
